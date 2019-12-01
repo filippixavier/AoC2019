@@ -13,7 +13,7 @@ fn default_star() -> Result<(), Box<dyn Error + 'static>> {
 fn main() {
     let mut buffer = String::new();
     let mut day: u32 = 1;
-    println!("Please enter some text: ");
+    println!("Please enter the day number: ");
     match io::stdin().read_line(&mut buffer) {
         Ok(_) => {
             // Must use trim_end or the line ending mess up with the parsing function
