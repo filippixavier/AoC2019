@@ -34,6 +34,10 @@ fn main() {
             first_star = days::day2::first_star;
             second_star = days::day2::second_star;
         }
+        3 => {
+            first_star = days::day3::first_star;
+            second_star = days::day3::second_star;
+        }
         _ => {
             println!("Executing nothing");
             first_star = default_star;
@@ -47,7 +51,7 @@ fn main() {
             println!("Error: {:?}", x);
         }
         _ => {
-            println!("First Star: Succeed!");
+            println!("First Star: Success!");
         }
     }
     match second_star() {
@@ -55,7 +59,7 @@ fn main() {
             println!("Error {:?}", x);
         }
         _ => {
-            println!("Second Star: Succeed!");
+            println!("Second Star: Success!");
         }
     }
     let end = now.elapsed();
