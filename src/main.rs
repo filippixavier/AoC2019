@@ -38,6 +38,10 @@ fn main() {
             first_star = days::day3::first_star;
             second_star = days::day3::second_star;
         }
+        4 => {
+            first_star = days::day4::first_star;
+            second_star = days::day4::second_star;
+        }
         _ => {
             println!("Executing nothing");
             first_star = default_star;
