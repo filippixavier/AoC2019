@@ -29,6 +29,7 @@ impl Intcode {
 
         let opcode: String = instruction.collect();
 
+        // Possible refactoring: store functions in an hashmap with opcodes as keys
         match opcode.as_ref() {
             "01" => {
                 self.add(parameter_flags);
@@ -47,58 +48,85 @@ impl Intcode {
                 println!("Output: {}", self.output);
                 true
             }
+            "05" => {
+                self.jump_if_true(parameter_flags);
+                true
+            }
+            "06" => {
+                self.jump_if_false(parameter_flags);
+                true
+            }
+            "07" => {
+                self.less_than(parameter_flags);
+                true
+            }
+            "08" => {
+                self.equals(parameter_flags);
+                true
+            }
             "99" => false,
             _ => panic!("HALT AND CATCH FIRE"),
         }
     }
 
-    fn add(&mut self, flags: ParameterFlags) {
-        if !flags.2 {
-            panic!("Add: Something went terribly wrong: param 3 is in immediate mode");
+    fn prepare_input(
+        &self,
+        flags: ParameterFlags,
+        op_len: usize,
+        op_name: String,
+    ) -> (Option<i32>, Option<i32>, Option<usize>) {
+        if op_len == 3 && !flags.2 {
+            panic!(
+                "{}: Something went terribly wrong: param 3 is in immediate mode",
+                op_name
+            );
         }
 
-        let store_index = self.memory[self.index + 3] as usize;
+        let first_value;
+        let mut second_value = None;
+        let mut store_index = None;
+
         let first_index = self.memory[self.index + 1];
-        let second_index = self.memory[self.index + 2];
-
-        let first_value = if flags.0 {
-            self.memory[first_index as usize]
+        let second_index = if op_len >= 2 {
+            self.memory[self.index + 2]
         } else {
-            first_index
+            0
         };
 
-        let second_value = if flags.1 {
-            self.memory[second_index as usize]
+        first_value = if flags.0 {
+            Some(self.memory[first_index as usize])
         } else {
-            second_index
+            Some(first_index)
         };
 
-        self.memory[store_index] = first_value + second_value;
+        if op_len >= 2 {
+            second_value = if flags.1 {
+                Some(self.memory[second_index as usize])
+            } else {
+                Some(second_index)
+            };
+        }
+
+        if op_len == 3 {
+            store_index = Some(self.memory[self.index + 3] as usize);
+        }
+
+        (first_value, second_value, store_index)
+    }
+
+    fn add(&mut self, flags: ParameterFlags) {
+        let (first_value, second_value, store_index) =
+            self.prepare_input(flags, 3, "Add".to_string());
+
+        self.memory[store_index.unwrap()] = first_value.unwrap() + second_value.unwrap();
         self.index += 4;
     }
 
     fn mul(&mut self, flags: ParameterFlags) {
-        if !flags.2 {
-            panic!("Mul: Something went terribly wrong: param 3 is in immediate mode");
-        }
+        let (first_value, second_value, store_index) =
+            self.prepare_input(flags, 3, "Mul".to_string());
 
-        let store_index = self.memory[self.index + 3] as usize;
-        let first_index = self.memory[self.index + 1];
-        let second_index = self.memory[self.index + 2];
-
-        let first_value = if flags.0 {
-            self.memory[first_index as usize]
-        } else {
-            first_index
-        };
-
-        let second_value = if flags.1 {
-            self.memory[second_index as usize]
-        } else {
-            second_index
-        };
-
-        self.memory[store_index] = first_value * second_value;
+        self.memory[store_index.unwrap()] = first_value.unwrap() * second_value.unwrap();
         self.index += 4;
     }
 
@@ -127,5 +155,55 @@ impl Intcode {
         };
 
         self.index += 2;
+    }
+
+    fn jump_if_true(&mut self, flags: ParameterFlags) {
+        let (first_value, second_value, _) =
+            self.prepare_input(flags, 2, "Jump if true".to_string());
+        let first_value = first_value.unwrap();
+        let second_value = second_value.unwrap();
+
+        self.index = if first_value != 0 {
+            second_value as usize
+        } else {
+            self.index + 3
+        }
+    }
+
+    fn jump_if_false(&mut self, flags: ParameterFlags) {
+        let (first_value, second_value, _) =
+            self.prepare_input(flags, 2, "Jump if false".to_string());
+        let first_value = first_value.unwrap();
+        let second_value = second_value.unwrap();
+
+        self.index = if first_value == 0 {
+            second_value as usize
+        } else {
+            self.index + 3
+        }
+    }
+
+    fn less_than(&mut self, flags: ParameterFlags) {
+        let (first_value, second_value, store_index) =
+            self.prepare_input(flags, 3, "Less than".to_string());
+        let first_value = first_value.unwrap();
+        let second_value = second_value.unwrap();
+        let store_index = store_index.unwrap();
+
+        self.memory[store_index] = if first_value < second_value { 1 } else { 0 };
+
+        self.index += 4;
+    }
+
+    fn equals(&mut self, flags: ParameterFlags) {
+        let (first_value, second_value, store_index) =
+            self.prepare_input(flags, 3, "equals".to_string());
+        let first_value = first_value.unwrap();
+        let second_value = second_value.unwrap();
+        let store_index = store_index.unwrap();
+
+        self.memory[store_index] = if first_value == second_value { 1 } else { 0 };
+
+        self.index += 4;
     }
 }
