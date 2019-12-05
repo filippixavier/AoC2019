@@ -2,7 +2,7 @@ pub struct Intcode {
     memory: Vec<i32>,
     index: usize,
     input: i32,
-    output: i32,
+    pub output: i32,
 }
 
 type ParameterFlags = (bool, bool, bool);
@@ -19,13 +19,15 @@ impl Intcode {
     pub fn next_op(&mut self) -> bool {
         let instruction = format!("{:05}", self.memory[self.index]);
         let mut instruction = instruction.chars();
-        let pos_mod_first = instruction.nth(3).unwrap() == '0';
-        let pos_mod_second = instruction.nth(2).unwrap() == '0';
+
+        // The nth operation consume the element and the previous ones, nth(0) also shift the iterator
         let pos_mod_third = instruction.nth(0).unwrap() == '0';
+        let pos_mod_second = instruction.nth(0).unwrap() == '0';
+        let pos_mod_first = instruction.nth(0).unwrap() == '0';
 
         let parameter_flags = (pos_mod_first, pos_mod_second, pos_mod_third);
 
-        let opcode: String = instruction.skip(4).take(2).collect();
+        let opcode: String = instruction.collect();
 
         match opcode.as_ref() {
             "01" => {
@@ -42,6 +44,7 @@ impl Intcode {
             }
             "04" => {
                 self.output(parameter_flags);
+                println!("Output: {}", self.output);
                 true
             }
             "99" => false,
@@ -101,7 +104,10 @@ impl Intcode {
 
     fn input(&mut self, flags: ParameterFlags) {
         if !flags.0 {
-            panic!("Input: Something went terribly wrong: param 1 is in immediate mode");
+            panic!(
+                "Input: Something went terribly wrong: param 1 is in immediate mode: {}",
+                self.memory[self.index]
+            );
         }
 
         let index = self.memory[self.index + 1] as usize;
@@ -112,13 +118,13 @@ impl Intcode {
     }
 
     fn output(&mut self, flags: ParameterFlags) {
-        if !flags.0 {
-            panic!("Input: Something went terribly wrong: param 1 is in immediate mode");
-        }
+        let index = self.memory[self.index + 1];
 
-        let index = self.memory[self.index + 1] as usize;
-
-        self.output = self.memory[index];
+        self.output = if flags.0 {
+            self.memory[index as usize]
+        } else {
+            index
+        };
 
         self.index += 2;
     }
