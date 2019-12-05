@@ -23,5 +23,12 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let mem = prepare_file(fs::read_to_string(Path::new("./data/day5.txt"))?);
+    let mut int_machine = Intcode::new(mem, 5);
+
+    while int_machine.next_op() {}
+
+    println!("The final output is: {}", int_machine.output);
+
     Ok(())
 }
