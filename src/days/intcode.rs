@@ -3,7 +3,7 @@ pub struct Intcode {
     index: usize,
     inputs: Vec<i32>,
     pub output: i32,
-    status: CompStatus,
+    pub status: CompStatus,
 }
 
 type ParameterFlags = (bool, bool, bool);
@@ -54,11 +54,7 @@ impl Intcode {
             "01" => self.add(parameter_flags),
             "02" => self.mul(parameter_flags),
             "03" => self.use_input(parameter_flags),
-            "04" => {
-                let status = self.output(parameter_flags);
-                println!("Output: {}", self.output);
-                status
-            }
+            "04" => self.output(parameter_flags),
             "05" => self.jump_if_true(parameter_flags),
             "06" => self.jump_if_false(parameter_flags),
             "07" => self.less_than(parameter_flags),
