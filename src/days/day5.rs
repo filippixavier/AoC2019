@@ -14,19 +14,14 @@ fn prepare_file(input: String) -> Vec<i32> {
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let mem = prepare_file(fs::read_to_string(Path::new("./data/day5.txt"))?);
-    let mut int_machine = Intcode::new(mem, 1);
-
-    while int_machine.next_op() {}
-
+    let int_machine = Intcode::new(mem).add_input(1).run();
     println!("The final output is: {}", int_machine.output);
     Ok(())
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     let mem = prepare_file(fs::read_to_string(Path::new("./data/day5.txt"))?);
-    let mut int_machine = Intcode::new(mem, 5);
-
-    while int_machine.next_op() {}
+    let int_machine = Intcode::new(mem).add_input(5).run();
 
     println!("The final output is: {}", int_machine.output);
 

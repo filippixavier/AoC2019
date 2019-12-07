@@ -1,22 +1,42 @@
 pub struct Intcode {
     memory: Vec<i32>,
     index: usize,
-    input: i32,
+    inputs: Vec<i32>,
     pub output: i32,
+    status: CompStatus,
 }
 
 type ParameterFlags = (bool, bool, bool);
 
+#[derive(Debug, PartialEq)]
+pub enum CompStatus {
+    Running,
+    Waiting,
+    Halted,
+    Error,
+}
+
+use self::CompStatus::*;
+
 impl Intcode {
-    pub fn new(memory: Vec<i32>, input: i32) -> Intcode {
+    pub fn new(memory: Vec<i32>) -> Intcode {
         Intcode {
             memory,
             index: 0,
-            input,
+            inputs: vec![],
             output: 0,
+            status: Waiting,
         }
     }
-    pub fn next_op(&mut self) -> bool {
+
+    pub fn run(mut self) -> Intcode {
+        while self.status == Running {
+            self.status = self.next_op();
+        }
+        self
+    }
+
+    pub fn next_op(&mut self) -> CompStatus {
         let instruction = format!("{:05}", self.memory[self.index]);
         let mut instruction = instruction.chars();
 
@@ -31,45 +51,39 @@ impl Intcode {
 
         // Possible refactoring: store functions in an hashmap with opcodes as keys
         match opcode.as_ref() {
-            "01" => {
-                self.add(parameter_flags);
-                true
-            }
-            "02" => {
-                self.mul(parameter_flags);
-                true
-            }
-            "03" => {
-                self.input(parameter_flags);
-                true
-            }
+            "01" => self.add(parameter_flags),
+            "02" => self.mul(parameter_flags),
+            "03" => self.use_input(parameter_flags),
             "04" => {
-                self.output(parameter_flags);
+                let status = self.output(parameter_flags);
                 println!("Output: {}", self.output);
-                true
+                status
             }
-            "05" => {
-                self.jump_if_true(parameter_flags);
-                true
+            "05" => self.jump_if_true(parameter_flags),
+            "06" => self.jump_if_false(parameter_flags),
+            "07" => self.less_than(parameter_flags),
+            "08" => self.equals(parameter_flags),
+            "99" => Halted,
+            _ => {
+                println!("HALT AND CATCH FIRE");
+                Error
             }
-            "06" => {
-                self.jump_if_false(parameter_flags);
-                true
-            }
-            "07" => {
-                self.less_than(parameter_flags);
-                true
-            }
-            "08" => {
-                self.equals(parameter_flags);
-                true
-            }
-            "99" => false,
-            _ => panic!("HALT AND CATCH FIRE"),
         }
     }
 
-    fn prepare_input(
+    pub fn add_input(mut self, input: i32) -> Self {
+        self.inputs.reverse();
+        self.inputs.push(input);
+        self.inputs.reverse();
+
+        if self.status == Waiting {
+            self.status = Running;
+        }
+
+        self
+    }
+
+    fn prepare_op(
         &self,
         flags: ParameterFlags,
         op_len: usize,
@@ -114,23 +128,29 @@ impl Intcode {
         (first_value, second_value, store_index)
     }
 
-    fn add(&mut self, flags: ParameterFlags) {
-        let (first_value, second_value, store_index) =
-            self.prepare_input(flags, 3, "Add".to_string());
+    fn add(&mut self, flags: ParameterFlags) -> CompStatus {
+        let (first_value, second_value, store_index) = self.prepare_op(flags, 3, "Add".to_string());
 
         self.memory[store_index.unwrap()] = first_value.unwrap() + second_value.unwrap();
         self.index += 4;
+        Running
     }
 
-    fn mul(&mut self, flags: ParameterFlags) {
-        let (first_value, second_value, store_index) =
-            self.prepare_input(flags, 3, "Mul".to_string());
+    fn mul(&mut self, flags: ParameterFlags) -> CompStatus {
+        let (first_value, second_value, store_index) = self.prepare_op(flags, 3, "Mul".to_string());
 
         self.memory[store_index.unwrap()] = first_value.unwrap() * second_value.unwrap();
         self.index += 4;
+        Running
     }
 
-    fn input(&mut self, flags: ParameterFlags) {
+    fn use_input(&mut self, flags: ParameterFlags) -> CompStatus {
+        if self.inputs.is_empty() {
+            return Waiting;
+        }
+
+        let new_input = self.inputs.pop().unwrap();
+
         if !flags.0 {
             panic!(
                 "Input: Something went terribly wrong: param 1 is in immediate mode: {}",
@@ -140,12 +160,13 @@ impl Intcode {
 
         let index = self.memory[self.index + 1] as usize;
 
-        self.memory[index] = self.input;
+        self.memory[index] = new_input;
 
         self.index += 2;
+        Running
     }
 
-    fn output(&mut self, flags: ParameterFlags) {
+    fn output(&mut self, flags: ParameterFlags) -> CompStatus {
         let index = self.memory[self.index + 1];
 
         self.output = if flags.0 {
@@ -155,11 +176,11 @@ impl Intcode {
         };
 
         self.index += 2;
+        Running
     }
 
-    fn jump_if_true(&mut self, flags: ParameterFlags) {
-        let (first_value, second_value, _) =
-            self.prepare_input(flags, 2, "Jump if true".to_string());
+    fn jump_if_true(&mut self, flags: ParameterFlags) -> CompStatus {
+        let (first_value, second_value, _) = self.prepare_op(flags, 2, "Jump if true".to_string());
         let first_value = first_value.unwrap();
         let second_value = second_value.unwrap();
 
@@ -167,12 +188,12 @@ impl Intcode {
             second_value as usize
         } else {
             self.index + 3
-        }
+        };
+        Running
     }
 
-    fn jump_if_false(&mut self, flags: ParameterFlags) {
-        let (first_value, second_value, _) =
-            self.prepare_input(flags, 2, "Jump if false".to_string());
+    fn jump_if_false(&mut self, flags: ParameterFlags) -> CompStatus {
+        let (first_value, second_value, _) = self.prepare_op(flags, 2, "Jump if false".to_string());
         let first_value = first_value.unwrap();
         let second_value = second_value.unwrap();
 
@@ -180,12 +201,13 @@ impl Intcode {
             second_value as usize
         } else {
             self.index + 3
-        }
+        };
+        Running
     }
 
-    fn less_than(&mut self, flags: ParameterFlags) {
+    fn less_than(&mut self, flags: ParameterFlags) -> CompStatus {
         let (first_value, second_value, store_index) =
-            self.prepare_input(flags, 3, "Less than".to_string());
+            self.prepare_op(flags, 3, "Less than".to_string());
         let first_value = first_value.unwrap();
         let second_value = second_value.unwrap();
         let store_index = store_index.unwrap();
@@ -193,11 +215,12 @@ impl Intcode {
         self.memory[store_index] = if first_value < second_value { 1 } else { 0 };
 
         self.index += 4;
+        Running
     }
 
-    fn equals(&mut self, flags: ParameterFlags) {
+    fn equals(&mut self, flags: ParameterFlags) -> CompStatus {
         let (first_value, second_value, store_index) =
-            self.prepare_input(flags, 3, "equals".to_string());
+            self.prepare_op(flags, 3, "equals".to_string());
         let first_value = first_value.unwrap();
         let second_value = second_value.unwrap();
         let store_index = store_index.unwrap();
@@ -205,5 +228,6 @@ impl Intcode {
         self.memory[store_index] = if first_value == second_value { 1 } else { 0 };
 
         self.index += 4;
+        Running
     }
 }
