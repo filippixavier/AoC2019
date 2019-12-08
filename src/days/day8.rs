@@ -3,8 +3,7 @@ use std::fs;
 use std::path::Path;
 
 const WIDTH: usize = 25;
-const HEIGHT: usize = 6;
-const PAGE_SIZE: usize = HEIGHT * WIDTH;
+const PAGE_SIZE: usize = 25 * 6;
 
 fn prepare_file(input: String) -> Vec<u32> {
     input
@@ -51,5 +50,29 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let img = prepare_file(fs::read_to_string(Path::new("./data/day8.txt"))?);
+    let mut result: Vec<u32> = vec![2; PAGE_SIZE];
+
+    for page in img.chunks(PAGE_SIZE) {
+        for (index, elem) in page.iter().enumerate() {
+            result[index] = if result[index] == 2 {
+                *elem
+            } else {
+                result[index]
+            }
+        }
+    }
+
+    println!("Printing result: ");
+
+    for (index, value) in result.iter().enumerate() {
+        let character = if *value == 0 { "\u{25A1}" } else { "■" };
+        if index % WIDTH == 0 {
+            println!();
+        }
+        print!("{}", character);
+    }
+    println!();
+
     Ok(())
 }
