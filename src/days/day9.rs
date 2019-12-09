@@ -20,5 +20,8 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let memory = prepare_file(fs::read_to_string(Path::new("./data/day9.txt"))?);
+    let intmachine = Intcode::new(memory).add_input(2).run();
+    println!("{}, {:?}", intmachine.output, intmachine.status);
     Ok(())
 }
