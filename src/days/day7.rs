@@ -5,11 +5,11 @@ use std::path::Path;
 
 use super::intcode::{CompStatus, Intcode};
 
-fn prepare_file(input: String) -> Vec<i32> {
+fn prepare_file(input: String) -> Vec<i64> {
     input
         .trim()
         .split(',')
-        .map(|x| (x.trim().parse::<i32>().unwrap_or(0)))
+        .map(|x| (x.trim().parse::<i64>().unwrap_or(0)))
         .collect::<Vec<_>>()
 }
 
@@ -18,7 +18,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 
     let permutations_it = (0..5).permutations(5);
 
-    let mut max_thruster: Option<i32> = None;
+    let mut max_thruster: Option<i64> = None;
     let mut permutation_str: String = String::from("None");
 
     for permutation in permutations_it {
@@ -79,7 +79,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
 
     let permutations_it = (5..10).permutations(5);
 
-    let mut max_thruster: Option<i32> = None;
+    let mut max_thruster: Option<i64> = None;
     let mut permutation_str: String = String::from("None");
 
     for permutation in permutations_it {
