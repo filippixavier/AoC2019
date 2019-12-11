@@ -4,6 +4,7 @@ pub struct Intcode {
     inputs: Vec<i64>,
     relative_offset: i64,
     pub output: i64,
+    pub outputs: Vec<i64>,
     pub status: CompStatus,
 }
 
@@ -56,6 +57,7 @@ impl Intcode {
             index: 0,
             inputs: vec![],
             output: 0,
+            outputs: vec![],
             relative_offset: 0,
             status: Running,
         }
@@ -239,7 +241,11 @@ impl Intcode {
             Relative => self.memory[(index + self.relative_offset) as usize],
         };
 
-        println!("{}", self.output);
+        // println!("{}", self.output);
+
+        self.outputs.reverse();
+        self.outputs.push(self.output);
+        self.outputs.reverse();
 
         self.index += 2;
         Running
