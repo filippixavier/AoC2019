@@ -23,7 +23,7 @@ impl Robot {
             map: HashMap::new(),
         }
     }
-    pub fn launch_star1(mut self) -> Self {
+    pub fn paint(mut self) -> Self {
         while self.brain.status != CompStatus::Halted {
             let current_color = if let Some(color) = self.map.get(&self.coordinate) {
                 *color as i64
@@ -50,6 +50,30 @@ impl Robot {
         }
         self
     }
+
+    pub fn to_img(&self) -> String {
+        let (mut min_x, mut max_x, mut min_y, mut max_y) = (0, 0, 0, 0);
+        for coord in self.map.keys() {
+            min_x = std::cmp::min(min_x, coord.0);
+            max_x = std::cmp::max(max_x, coord.0);
+            min_y = std::cmp::min(min_y, coord.1);
+            max_y = std::cmp::max(max_y, coord.1);
+        }
+
+        let x_length = max_x - min_x + 1;
+        let y_length = max_y - min_y + 1;
+
+        let mut result = vec![];
+        for y in 0..y_length {
+            let mut line = vec![];
+            for x in 0..x_length {
+                let color = *(self.map.get(&(x - min_x, y - min_y)).unwrap_or(&0));
+                line.push(if color == 0 { " " } else { "#" });
+            }
+            result.push(line.join(""));
+        }
+        result.join("\n")
+    }
 }
 
 fn prepare_file(input: String) -> Vec<i64> {
@@ -62,11 +86,18 @@ fn prepare_file(input: String) -> Vec<i64> {
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let memory = prepare_file(fs::read_to_string(Path::new("./data/day11.txt"))?);
-    let robot = Robot::new(memory).launch_star1();
+    let robot = Robot::new(memory).paint();
     println!("Number of individual panel painted: {}", robot.map.len());
     Ok(())
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let memory = prepare_file(fs::read_to_string(Path::new("./data/day11.txt"))?);
+    let mut robot = Robot::new(memory);
+    robot.map.insert((0, 0), 1);
+    robot = robot.paint();
+    println!("Image is: ");
+    println!("{}", robot.to_img());
+    println!("Number of individual panel painted: {}", robot.map.len());
     Ok(())
 }
