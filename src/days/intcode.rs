@@ -63,7 +63,7 @@ impl Intcode {
         }
     }
 
-    pub fn run(mut self) -> Intcode {
+    pub fn run(mut self) -> Self {
         while self.status == Running {
             self.status = self.next_op();
         }
@@ -249,6 +249,12 @@ impl Intcode {
 
         self.index += 2;
         Running
+    }
+
+    pub fn get_outputs(&mut self) -> Vec<i64> {
+        let outs = self.outputs.clone();
+        self.outputs = vec![];
+        outs
     }
 
     fn jump_if_true(&mut self, flags: ParameterFlags) -> CompStatus {
