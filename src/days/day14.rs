@@ -7,8 +7,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 struct Recipe {
-    qut_produced: usize,
-    composition: HashMap<String, usize>,
+    qut_produced: u64,
+    composition: HashMap<String, u64>,
 }
 
 fn get_recipes(input: String) -> HashMap<String, Recipe> {
@@ -23,10 +23,10 @@ fn get_recipes(input: String) -> HashMap<String, Recipe> {
         let going_out = reg.captures(recipe[1]).unwrap();
         let out_name: String = going_out[2].to_string();
 
-        let mut composition: HashMap<String, usize> = HashMap::new();
+        let mut composition: HashMap<String, u64> = HashMap::new();
 
         for ins in going_in {
-            let qut = ins[1].parse::<usize>().unwrap();
+            let qut = ins[1].parse::<u64>().unwrap();
             let name = ins[2].to_string();
 
             composition.insert(name, qut);
@@ -35,7 +35,7 @@ fn get_recipes(input: String) -> HashMap<String, Recipe> {
         values.insert(
             out_name,
             Recipe {
-                qut_produced: going_out[1].parse::<usize>().unwrap(),
+                qut_produced: going_out[1].parse::<u64>().unwrap(),
                 composition,
             },
         );
@@ -44,12 +44,15 @@ fn get_recipes(input: String) -> HashMap<String, Recipe> {
     values
 }
 
-pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
-    let recipes = get_recipes(fs::read_to_string(Path::new("./data/day14.txt"))?);
+fn run_machine(recipes: &HashMap<String, Recipe>, fuel_to_produce: u64) -> u64 {
     let mut status = recipes.get("FUEL").unwrap().composition.clone();
-    let mut left_overs: HashMap<String, usize> = HashMap::new();
+    let mut left_overs: HashMap<String, u64> = HashMap::new();
 
     let mut ore_count = 0;
+
+    for (_, qut) in status.iter_mut() {
+        *qut *= fuel_to_produce;
+    }
 
     while !status.is_empty() {
         let mut new_status = HashMap::new();
@@ -67,7 +70,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
                 value
             };
 
-            let ratio = (truly_needed as f32 / recipe.qut_produced as f32).ceil() as usize;
+            let ratio = (truly_needed as f64 / recipe.qut_produced as f64).ceil() as u64;
 
             *compo_made += ratio * recipe.qut_produced - truly_needed;
 
@@ -83,12 +86,45 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 
         status = new_status;
     }
+    ore_count
+}
 
-    println!("Minimum quantity of ORE required: {}", ore_count);
+pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
+    let recipes = get_recipes(fs::read_to_string(Path::new("./data/day14.txt"))?);
+    println!(
+        "Minimum quantity of ORE required: {}",
+        run_machine(&recipes, 1)
+    );
 
     Ok(())
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let available_ore: u64 = 1_000_000_000_000;
+    let recipes = get_recipes(fs::read_to_string(Path::new("./data/day14.txt"))?);
+
+    let fuel_for_ore = run_machine(&recipes, 1);
+
+    let mut attempt = 0;
+    let mut left_overs_ore = available_ore;
+
+    loop {
+        let fuel_to_add = if left_overs_ore / fuel_for_ore == 0 {
+            1
+        } else {
+            left_overs_ore / fuel_for_ore
+        };
+        attempt += fuel_to_add;
+        let ore_consumed = run_machine(&recipes, attempt);
+
+        if ore_consumed < available_ore {
+            left_overs_ore = available_ore - ore_consumed;
+        } else {
+            attempt -= fuel_to_add;
+            break;
+        }
+    }
+
+    println!("Maximum fuel: {}", attempt);
     Ok(())
 }
