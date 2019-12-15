@@ -24,10 +24,10 @@ struct Position {
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let memory = prepare_file(fs::read_to_string(Path::new("./data/day13.txt"))?);
-    let int_machine = Intcode::new(memory).run();
+    let mut int_machine = Intcode::new(memory).run();
     let mut map: HashMap<(i64, i64), i64> = HashMap::new();
 
-    let mut outputs = int_machine.outputs.clone();
+    let mut outputs = int_machine.get_outputs();
     outputs.reverse();
 
     for chunk in outputs.into_iter().chunks(3).into_iter() {
@@ -83,13 +83,12 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
 
     //Update
     while int_machine.status != CompStatus::Halted && !blocks.is_empty() {
+        use std::cmp::Ordering::*;
         int_machine = int_machine
-            .add_input(if ball.x < paddle.x {
-                -1
-            } else if ball.x > paddle.x {
-                1
-            } else {
-                0
+            .add_input(match ball.x.cmp(&paddle.x) {
+                Less => -1,
+                Equal => 0,
+                Greater => 1,
             })
             .run();
         let mut outputs = int_machine.get_outputs();

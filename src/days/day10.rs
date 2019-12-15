@@ -2,6 +2,8 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
+use std::cmp::Ordering;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Point {
     x: usize,
@@ -32,20 +34,18 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
         let mut equations = vec![];
         for asteroid_b in &map {
             if asteroid_b != asteroid_a {
-                let h = if asteroid_b.x < asteroid_a.x {
-                    "l"
-                } else if asteroid_b.x > asteroid_a.x {
-                    "r"
-                } else {
-                    "e"
+                let h = match asteroid_b.x.cmp(&asteroid_a.x) {
+                    Ordering::Less => 'l',
+                    Ordering::Equal => 'e',
+                    Ordering::Greater => 'r',
                 };
-                let v = if asteroid_b.y < asteroid_a.y {
-                    "u"
-                } else if asteroid_b.y > asteroid_a.y {
-                    "d"
-                } else {
-                    "e"
+
+                let v = match asteroid_b.y.cmp(&asteroid_a.y) {
+                    Ordering::Less => 'u',
+                    Ordering::Equal => 'e',
+                    Ordering::Greater => 'd',
                 };
+
                 let equ = (asteroid_b.y as f32 - asteroid_a.y as f32)
                     / (asteroid_b.x as f32 - asteroid_a.x as f32);
 
@@ -92,19 +92,16 @@ impl Line {
         }
 
         // Kinda hacking my way around float as working with angles introduce way to much approximation
-        let h = if destination.x < origin.x {
-            "l"
-        } else if destination.x > origin.x {
-            "r"
-        } else {
-            "e"
+        let h = match destination.x.cmp(&origin.x) {
+            Ordering::Less => 'l',
+            Ordering::Equal => 'e',
+            Ordering::Greater => 'r',
         };
-        let v = if destination.y < origin.y {
-            "u"
-        } else if destination.y > origin.y {
-            "d"
-        } else {
-            "e"
+
+        let v = match destination.y.cmp(&origin.y) {
+            Ordering::Less => 'u',
+            Ordering::Equal => 'e',
+            Ordering::Greater => 'd',
         };
         let equ =
             (destination.y as f32 - origin.y as f32) / (destination.x as f32 - origin.x as f32);

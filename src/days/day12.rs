@@ -29,28 +29,27 @@ impl Moon {
     }
 
     fn get_gravity_variation(&self, other: &Self) -> (i64, i64, i64) {
+        use std::cmp::Ordering;
         let mut result = (0, 0, 0);
-        result.0 = if self.x < other.x {
-            1
-        } else if self.x > other.x {
-            -1
-        } else {
-            0
+
+        result.0 = match self.x.cmp(&other.x) {
+            Ordering::Less => 1,
+            Ordering::Equal => 0,
+            Ordering::Greater => -1,
         };
-        result.1 = if self.y < other.y {
-            1
-        } else if self.y > other.y {
-            -1
-        } else {
-            0
+
+        result.1 = match self.y.cmp(&other.y) {
+            Ordering::Less => 1,
+            Ordering::Equal => 0,
+            Ordering::Greater => -1,
         };
-        result.2 = if self.z < other.z {
-            1
-        } else if self.z > other.z {
-            -1
-        } else {
-            0
+
+        result.2 = match self.z.cmp(&other.z) {
+            Ordering::Less => 1,
+            Ordering::Equal => 0,
+            Ordering::Greater => -1,
         };
+
         result
     }
 
@@ -125,6 +124,11 @@ fn ppcm(a: i64, b: i64) -> i64 {
     x * y / pgcd(x, y)
 }
 
+/**
+ * Answer partially provided by SO: was probably influenced by https://www.reddit.com/r/adventofcode/comments/e9lyto/2019_12_2_when_you_want_to_avoid_programming_math/
+ * And then really hinted by this one: https://www.reddit.com/r/adventofcode/comments/e9r2sz/day12_part_2_totally_stuck_on_how_to_approach_this/
+ * (Strangely enough: LCM didn't stroke me as much as "each axes are independant")
+ */
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     let mut moons = prepare_file(fs::read_to_string(Path::new("./data/day12.txt"))?);
     let mut gravities = vec![];
