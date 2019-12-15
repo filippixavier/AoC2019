@@ -63,6 +63,19 @@ impl Intcode {
         }
     }
 
+    pub fn new_with_path(path: String) -> Intcode {
+        let memory = prepare_memory(path);
+        Intcode {
+            memory,
+            index: 0,
+            inputs: vec![],
+            output: 0,
+            outputs: vec![],
+            relative_offset: 0,
+            status: Running,
+        }
+    }
+
     pub fn run(mut self) -> Self {
         while self.status == Running {
             self.status = self.next_op();
@@ -317,4 +330,12 @@ impl Intcode {
         self.index += 2;
         Running
     }
+}
+
+pub fn prepare_memory(input: String) -> Vec<i64> {
+    input
+        .trim()
+        .split(',')
+        .map(|x| (x.trim().parse::<i64>().unwrap_or(0)))
+        .collect::<Vec<_>>()
 }
