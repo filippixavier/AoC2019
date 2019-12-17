@@ -15,19 +15,23 @@ enum Tile {
     Start,
 }
 
-fn explore_map(mut repair_drone: intcode::Intcode) -> (HashMap<(i32, i32), Tile>, Tile) {
+type Coordinate = (i32, i32);
+type Map = HashMap<Coordinate, Tile>;
+
+fn explore_map(mut repair_drone: intcode::Intcode) -> (Map, Tile, Coordinate) {
     use self::Tile::*;
 
     let mut position = (0, 0);
-    let mut area: HashMap<(i32, i32), Tile> = HashMap::new();
+    let mut area: Map = HashMap::new();
 
     let mut dist = 0;
     let steps: Vec<i64> = vec![3, 1, 4, 2];
     let steps_back: Vec<i64> = vec![-1, 2, 1, 4, 3];
     let mut backward: Vec<i64> = vec![];
-    let mut previous_positions: Vec<(i32, i32)> = vec![];
+    let mut previous_positions: Vec<Coordinate> = vec![];
 
     let mut oxygen_tile = Unknown;
+    let mut oxygen_position = None;
 
     area.insert(position, Start);
 
@@ -83,6 +87,7 @@ fn explore_map(mut repair_drone: intcode::Intcode) -> (HashMap<(i32, i32), Tile>
                 2 => {
                     area.insert(next_pos, Oxygen(dist + 1));
                     oxygen_tile = Oxygen(dist + 1);
+                    oxygen_position = Some(next_pos);
                     true
                 }
                 _ => unreachable!(),
@@ -98,10 +103,10 @@ fn explore_map(mut repair_drone: intcode::Intcode) -> (HashMap<(i32, i32), Tile>
         }
     }
 
-    (area, oxygen_tile)
+    (area, oxygen_tile, oxygen_position.unwrap())
 }
 
-fn draw_map(area: &HashMap<(i32, i32), Tile>) {
+fn draw_map(area: &Map) {
     use Tile::*;
     let mut min_x: Option<i32> = None;
     let mut min_y: Option<i32> = None;
@@ -133,8 +138,8 @@ fn draw_map(area: &HashMap<(i32, i32), Tile>) {
         };
     }
 
-    for y in min_y.unwrap()..max_y.unwrap() + 1 {
-        for x in min_x.unwrap()..max_x.unwrap() + 1 {
+    for y in min_y.unwrap()..=max_y.unwrap() {
+        for x in min_x.unwrap()..=max_x.unwrap() {
             let tile = area.get(&(x, y)).unwrap_or(&Unknown);
             print!(
                 "{}",
@@ -152,7 +157,7 @@ fn draw_map(area: &HashMap<(i32, i32), Tile>) {
 }
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
-    let (area, oxygen_tile) = explore_map(intcode::Intcode::new_with_path(fs::read_to_string(
+    let (area, oxygen_tile, _) = explore_map(intcode::Intcode::new_with_path(fs::read_to_string(
         Path::new("./data/day15.txt"),
     )?));
     draw_map(&area);
@@ -165,5 +170,53 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    use Tile::*;
+    let (mut area, _, position) = explore_map(intcode::Intcode::new_with_path(fs::read_to_string(
+        Path::new("./data/day15.txt"),
+    )?));
+
+    area.insert(position, Oxygen(0));
+
+    let mut to_explore = vec![position];
+    let moves = vec![(0, 1), (0, -1), (1, 0), (-1, 0)];
+    let mut max_dist = 0;
+
+    while !to_explore.is_empty() {
+        let oxy_position = to_explore.pop().unwrap();
+
+        let dist = if let Oxygen(dist_to_origin) = area.get(&oxy_position).unwrap() {
+            *dist_to_origin
+        } else {
+            0
+        };
+
+        if dist > max_dist {
+            max_dist = dist;
+        }
+
+        for movement in moves.iter() {
+            let neighbor = (oxy_position.0 + movement.0, oxy_position.1 + movement.1);
+            if let Some(empty_cell) = area.get_mut(&neighbor) {
+                *empty_cell = match empty_cell {
+                    Oxygen(previous_dist) => {
+                        if *previous_dist < dist + 1 {
+                            Oxygen(*previous_dist)
+                        } else {
+                            Oxygen(dist + 1)
+                        }
+                    }
+                    Empty(_) => {
+                        to_explore.push(neighbor);
+                        Oxygen(dist + 1)
+                    }
+                    Unknown => Unknown,
+                    Start => Oxygen(dist + 1),
+                    Wall => Wall,
+                }
+            }
+        }
+    }
+
+    println!("It takes {} mins to fully fill the area", max_dist);
     Ok(())
 }
