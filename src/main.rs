@@ -90,6 +90,10 @@ fn main() {
             first_star = days::day16::first_star;
             second_star = days::day16::second_star;
         }
+        17 => {
+            first_star = days::day17::first_star;
+            second_star = days::day17::second_star;
+        }
         _ => {
             println!("Executing nothing");
             first_star = default_star;
