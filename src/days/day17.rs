@@ -131,7 +131,7 @@ fn find_next_prog(path: &str) -> String {
         prog = next_prog;
     }
 
-    prog.to_owned()
+    prog
 }
 
 fn create_path(map: HashMap<Coordinate, Tile>, mut robot_on_map: Robot) -> String {
