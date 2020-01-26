@@ -25,7 +25,6 @@ use Tile::*;
 struct Node {
     lockers: HashSet<char>,
     keys: HashSet<char>,
-    dist: usize,
     is_key: bool,
     neighbours: HashMap<char, usize>,
 }
@@ -35,7 +34,6 @@ impl Node {
         Node {
             lockers: HashSet::new(),
             keys: HashSet::new(),
-            dist: 0,
             is_key: false,
             neighbours: HashMap::new(),
         }
@@ -47,7 +45,6 @@ impl Clone for Node {
         Node {
             lockers: self.lockers.clone(),
             neighbours: self.neighbours.clone(),
-            dist: self.dist,
             is_key: self.is_key,
             keys: self.keys.clone(),
         }
@@ -108,7 +105,7 @@ fn bfs_from_node(map: &Map, start: Coordinate, is_root: bool, graph: &mut Graph)
     }
 
     while !to_visit.is_empty() {
-        let (coordinate, mut distance, mut lock_state_id) = to_visit.pop_back().unwrap();
+        let (coordinate, mut distance, lock_state_id) = to_visit.pop_back().unwrap();
 
         distance += 1;
 
@@ -135,17 +132,17 @@ fn bfs_from_node(map: &Map, start: Coordinate, is_root: bool, graph: &mut Graph)
                     let new_lock_state =
                         format!("{}{}", lock_states[lock_state_id], id.to_ascii_lowercase());
                     lock_states.push(new_lock_state);
-                    lock_state_id = lock_states.len() - 1;
+                    let new_lock_state_id = lock_states.len() - 1;
 
-                    to_visit.push_front((neighbour_tile, distance, lock_state_id));
+                    to_visit.push_front((neighbour_tile, distance, new_lock_state_id));
                 }
                 Door(id) => {
                     let new_lock_state =
                         format!("{}{}", lock_states[lock_state_id], id.to_ascii_lowercase());
                     lock_states.push(new_lock_state);
-                    lock_state_id = lock_states.len() - 1;
+                    let new_lock_state_id = lock_states.len() - 1;
 
-                    to_visit.push_front((neighbour_tile, distance, lock_state_id));
+                    to_visit.push_front((neighbour_tile, distance, new_lock_state_id));
                 }
                 Empty => {
                     to_visit.push_front((neighbour_tile, distance, lock_state_id));
@@ -159,113 +156,63 @@ fn bfs_from_node(map: &Map, start: Coordinate, is_root: bool, graph: &mut Graph)
 }
 
 fn bfs_graph_to_star(graph: &Graph) -> usize {
+    type QueuedData<'a> = VecDeque<(Vec<&'a Node>, HashSet<char>, usize, Option<char>)>;
+
     let mut min = None;
 
     let mut dedup: HashMap<String, usize> = HashMap::new();
 
-    let mut queue: VecDeque<(Node, char)> = graph
+    let mut root_keys = HashSet::new();
+
+    let roots: Vec<&Node> = graph
         .iter()
         .filter(|(key, _)| key.is_ascii_digit())
-        .map(|(key, start)| (start.clone(), *key))
-        .collect();
-    while !queue.is_empty() {
-        let (node, last_visited) = queue.pop_front().unwrap();
-        if node.keys.len() == graph.len() {
-            min = if let Some(min_value) = min {
-                Some(std::cmp::min(min_value, node.dist))
-            } else {
-                Some(node.dist)
-            }
-        }
-
-        let mut signature = node.keys.iter().copied().collect::<Vec<char>>();
-
-        signature.sort();
-        let signature = format!("{}{}", signature.iter().collect::<String>(), last_visited);
-
-        if let Some(dedup_min) = dedup.get(&signature) {
-            if *dedup_min <= node.dist {
-                continue;
-            }
-        }
-
-        dedup.insert(signature, node.dist);
-
-        for (node_name, dist) in node.neighbours.iter() {
-            let next_node = graph.get(node_name).unwrap();
-            if next_node.lockers.is_subset(&node.keys) && !node.keys.contains(node_name) {
-                let mut new_node = next_node.clone();
-                new_node.dist = node.dist + dist;
-                new_node.keys = node.keys.clone();
-                new_node.keys.insert(*node_name);
-                queue.push_back((new_node, *node_name));
-            }
-        }
-    }
-
-    min.unwrap_or(0)
-}
-
-fn bfs_graph_to_star_2(graph: &Graph) -> usize {
-    let mut min = None;
-
-    let mut dedup: HashMap<String, usize> = HashMap::new();
-
-    let roots: Vec<Node> = graph
-        .iter()
-        .filter(|(key, _)| key.is_ascii_digit())
-        .map(|(_, start)| start.clone())
+        .map(|(root_key, node)| {
+            root_keys.insert(*root_key);
+            node
+        })
         .collect();
 
-    let mut queue: VecDeque<(Vec<Node>, Option<char>)> = VecDeque::new();
-    queue.push_front((roots, None));
+    let mut queue: QueuedData = VecDeque::new();
+
+    queue.push_front((roots, root_keys, 0, None));
     while !queue.is_empty() {
-        let (nodes, last_visited) = queue.pop_front().unwrap();
+        let (nodes, keys_aquired, dist, last_visited) = queue.pop_front().unwrap();
 
-        let first_node = &nodes[0];
-
-        if first_node.keys.len() == graph.len() {
+        if keys_aquired.len() == graph.len() {
             min = if let Some(min_value) = min {
-                Some(std::cmp::min(min_value, first_node.dist))
+                Some(std::cmp::min(min_value, dist))
             } else {
-                Some(first_node.dist)
+                Some(dist)
             }
         }
 
+        // Dedup algorithm doesn't work on some edge case (the last test case doesn't have consistent result), thankfully, my puzzle input wasn't one of them.
         if let Some(last_char) = last_visited {
-            let mut signature = first_node.keys.iter().copied().collect::<Vec<char>>();
+            let mut signature = keys_aquired.iter().copied().collect::<Vec<char>>();
             signature.sort();
             let signature = format!("{}{}", signature.iter().collect::<String>(), last_char);
 
             if let Some(dedup_min) = dedup.get(&signature) {
-                if *dedup_min <= first_node.dist {
+                if *dedup_min <= dist {
                     continue;
                 }
             }
 
-            dedup.insert(signature, first_node.dist);
+            dedup.insert(signature, dist);
         }
 
         for (index, node) in nodes.iter().enumerate() {
-            for (node_name, dist) in node.neighbours.iter() {
+            for (node_name, node_dist) in node.neighbours.iter() {
                 let next_node = graph.get(node_name).unwrap();
-                if next_node.lockers.is_subset(&node.keys) && !node.keys.contains(node_name) {
+                if next_node.lockers.is_subset(&keys_aquired) && !keys_aquired.contains(node_name) {
                     let mut other_nodes = nodes.clone();
-                    for (index_other, other_node) in other_nodes.iter_mut().enumerate() {
-                        if index_other != index {
-                            other_node.dist = node.dist + dist;
-                            other_node.keys.insert(*node_name);
-                        }
-                    }
+                    let mut new_keys_aquired = keys_aquired.clone();
+                    new_keys_aquired.insert(*node_name);
 
-                    let mut new_node = next_node.clone();
-
-                    new_node.dist = node.dist + dist;
-                    new_node.keys = node.keys.clone();
-                    new_node.keys.insert(*node_name);
-
-                    other_nodes[index] = new_node;
-                    queue.push_back((other_nodes, Some(*node_name)));
+                    let next_dist = dist + node_dist;
+                    other_nodes[index] = next_node;
+                    queue.push_back((other_nodes, new_keys_aquired, next_dist, Some(*node_name)));
                 }
             }
         }
@@ -311,8 +258,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
         bfs_from_node(&map, *coord, is_root, &mut graph);
     }
 
-    println!("Min dist: {}", bfs_graph_to_star_2(&graph));
+    println!("Min dist: {}", bfs_graph_to_star(&graph));
 
     Ok(())
 }
-// 2478 too high
