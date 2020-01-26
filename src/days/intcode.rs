@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct Intcode {
     memory: Vec<i64>,
     index: usize,
@@ -32,7 +33,7 @@ impl MemExpand for Vec<i64> {
 
 type ParameterFlags = (ParameterMode, ParameterMode, ParameterMode);
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CompStatus {
     Running,
     Waiting,
