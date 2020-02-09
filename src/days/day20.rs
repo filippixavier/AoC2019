@@ -12,7 +12,7 @@ type CharMaze = Vec<Vec<char>>;
 
 type Maze = HashMap<Coordinate, Tile>;
 type Gates = HashMap<String, Coordinate>;
-type Warps = HashMap<Coordinate, Coordinate>;
+type Warps = HashMap<Coordinate, (Coordinate, bool)>;
 
 #[derive(Debug)]
 enum Tile {
@@ -27,6 +27,7 @@ fn find_portal(
     partial_gate_list: &mut HashSet<Coordinate>,
     gate_list: &mut Gates,
     warps: &mut Warps,
+    is_inner_ring: bool,
 ) {
     let start_tile = maze[start.0][start.1];
 
@@ -73,8 +74,8 @@ fn find_portal(
 
     if gate_list.contains_key(&door) {
         let twin_gate = gate_list.get(&door).unwrap();
-        warps.insert(gate_coordinate, *twin_gate);
-        warps.insert(*twin_gate, gate_coordinate);
+        warps.insert(gate_coordinate, (*twin_gate, is_inner_ring));
+        warps.insert(*twin_gate, (gate_coordinate, !is_inner_ring));
     } else {
         gate_list.insert(door, gate_coordinate);
     }
@@ -89,7 +90,7 @@ fn prepare_file(input: String) -> (Maze, Warps, Coordinate, Coordinate) {
 
     let mut maze = Maze::new();
 
-    let lines = input.split('\n').collect::<Vec<_>>();
+    let lines = input.lines().collect::<Vec<_>>();
     let char_maze = lines
         .into_iter()
         .map(|line| line.chars().collect::<Vec<char>>())
@@ -112,6 +113,12 @@ fn prepare_file(input: String) -> (Maze, Warps, Coordinate, Coordinate) {
                     if !letter.is_alphabetic() {
                         continue;
                     }
+
+                    let is_inner_ring = line_no > 2
+                        && line_no < char_maze.len() - 2
+                        && col_no > 2
+                        && col_no < char_maze[0].len() - 2;
+
                     if partial_gate_list.insert(coordinate) {
                         find_portal(
                             &char_maze,
@@ -119,6 +126,7 @@ fn prepare_file(input: String) -> (Maze, Warps, Coordinate, Coordinate) {
                             &mut partial_gate_list,
                             &mut unlinked_gates,
                             &mut linked_gates,
+                            is_inner_ring,
                         );
                     }
 
@@ -172,7 +180,8 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
                 }
                 Void => {
                     if warps.contains_key(&current_coordinate) {
-                        to_explore.push_back((*warps.get(&current_coordinate).unwrap(), dist + 1));
+                        let (coordinate, _) = *warps.get(&current_coordinate).unwrap();
+                        to_explore.push_back((coordinate, dist + 1));
                     }
                 }
                 Wall => {}
@@ -183,5 +192,55 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    use self::Tile::*;
+
+    let (maze, warps, start_point, end_point) =
+        prepare_file(fs::read_to_string(Path::new("./data/day20.txt"))?);
+
+    let directions = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
+    let mut already_explored: HashSet<(Coordinate, usize)> = HashSet::new();
+    let mut to_explore = VecDeque::new();
+
+    to_explore.push_front((start_point, 0, 0));
+
+    while !to_explore.is_empty() {
+        let (current_coordinate, dist, depth) = to_explore.pop_front().unwrap();
+
+        if !already_explored.insert((current_coordinate, depth)) {
+            continue;
+        }
+
+        if current_coordinate == end_point && depth == 0 {
+            println!("Total dist from AA to ZZ: {}", dist);
+            break;
+        }
+
+        for direction in directions.iter() {
+            let neighbor = (
+                (current_coordinate.0 as isize + direction.0) as usize,
+                (current_coordinate.1 as isize + direction.1) as usize,
+            );
+
+            match maze.get(&neighbor).unwrap() {
+                Empty => {
+                    to_explore.push_back((neighbor, dist + 1, depth));
+                }
+                Void => {
+                    if warps.contains_key(&current_coordinate) {
+                        let (coordinate, is_inner_ring) = *warps.get(&current_coordinate).unwrap();
+
+                        if depth == 0 && !is_inner_ring {
+                            continue;
+                        }
+
+                        let new_depth = if is_inner_ring { depth + 1 } else { depth - 1 };
+
+                        to_explore.push_back((coordinate, dist + 1, new_depth));
+                    }
+                }
+                Wall => {}
+            }
+        }
+    }
     Ok(())
 }
