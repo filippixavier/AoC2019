@@ -11,10 +11,10 @@ fn prepare_file(input: String, stack_len: i128) -> (i128, i128) {
 
         if let std::result::Result::Ok(value) = attempt_parsing {
             if splitted.len() == 2 {
-                coef.1 = coef.1 - value;
+                coef.1 -= value;
             } else {
-                coef.0 = coef.0 * value;
-                coef.1 = coef.1 * value;
+                coef.0 *= value;
+                coef.1 *= value;
             }
         } else {
             coef.0 = -coef.0;
@@ -63,7 +63,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let mut result = (2019 * coef.0 + coef.1) % stack_len;
 
     if result < 0 {
-        result = stack_len + result;
+        result += stack_len;
     }
 
     println!("From position 2019 to {}", result);
@@ -92,7 +92,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     result = (result * reverse_multiplier) % stack_len;
 
     if result < 0 {
-        result = stack_len + result;
+        result += stack_len;
     }
 
     println!("{}", result);
