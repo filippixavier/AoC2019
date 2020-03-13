@@ -130,6 +130,11 @@ impl Intcode {
     }
 
     pub fn add_input(mut self, input: i64) -> Self {
+        self.add_input_borrowing(input);
+        self
+    }
+
+    pub fn add_input_borrowing(&mut self, input: i64) {
         self.inputs.reverse();
         self.inputs.push(input);
         self.inputs.reverse();
@@ -137,8 +142,6 @@ impl Intcode {
         if self.status == Waiting {
             self.status = Running;
         }
-
-        self
     }
 
     fn prepare_op(
@@ -269,6 +272,10 @@ impl Intcode {
         let outs = self.outputs.clone();
         self.outputs = vec![];
         outs
+    }
+
+    pub fn peek_outputs(&mut self) -> &Vec<i64> {
+        &self.outputs
     }
 
     fn jump_if_true(&mut self, flags: ParameterFlags) -> CompStatus {
