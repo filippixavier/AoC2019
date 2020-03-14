@@ -30,11 +30,11 @@ fn prepare_file(input: String, stack_len: i128) -> (i128, i128) {
 
 // Copied from https://www.csee.umbc.edu/~chang/cs203.s09/exteuclid.shtml, needed http://defeo.lu/in310/poly/euclide-bezout/ and https://www.mathraining.be/chapters/4?type=1&which=16 to understand it
 // Inverse modulo is located in the 3 tuple
-fn extended_euclid(max: i128, min:i128) -> (i128, i128, i128) {
+fn extended_euclid(max: i128, min: i128) -> (i128, i128, i128) {
     if min == 0 {
         (max, 1, 0)
     } else {
-        let (d1, s1, t1) = extended_euclid(min, max%min);
+        let (d1, s1, t1) = extended_euclid(min, max % min);
         (d1, t1, s1 - (max / min) * t1) // See http://defeo.lu/in310/poly/euclide-bezout/ on recursive relation
     }
 }
@@ -58,7 +58,10 @@ fn modular_power(base: i128, power: i128, modulo: i128) -> i128 {
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let stack_len = 10_007;
-    let coef = prepare_file(fs::read_to_string(Path::new("./data/day22.txt"))?, stack_len);
+    let coef = prepare_file(
+        fs::read_to_string(Path::new("./data/day22.txt"))?,
+        stack_len,
+    );
 
     let mut result = (2019 * coef.0 + coef.1) % stack_len;
 
@@ -71,12 +74,14 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     Ok(())
 }
 
-
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     let stack_len = 119_315_717_514_047_i128;
     let num_of_computations = 101_741_582_076_661_i128;
 
-    let (factor, constant) = prepare_file(fs::read_to_string(Path::new("./data/day22.txt"))?, stack_len);
+    let (factor, constant) = prepare_file(
+        fs::read_to_string(Path::new("./data/day22.txt"))?,
+        stack_len,
+    );
 
     let (_, _, denominator_inverse) = extended_euclid(stack_len, 1 - factor);
 
@@ -84,7 +89,8 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
 
     // let total_offset = constant * (1 - total_multiplier) / (1 - factor); // Because division doesn't really works with modulo?
 
-    let total_offset = (constant * (((1 - total_multiplier) * denominator_inverse) % stack_len)) % stack_len;
+    let total_offset =
+        (constant * (((1 - total_multiplier) * denominator_inverse) % stack_len)) % stack_len;
 
     let (_, _, reverse_multiplier) = extended_euclid(stack_len, total_multiplier); // Note: According to solution, I could also find any reverse by calculing a^b where b is stack_len - 2, since stack_len is prime, any a^(stack_len-1) = 1 mod stack_len
 
