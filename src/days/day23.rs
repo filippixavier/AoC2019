@@ -141,9 +141,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
             }
         }
 
-        let is_truly_idling = idlings
-            .iter()
-            .all(|curr| *curr == NodeStatus::Idle);
+        let is_truly_idling = idlings.iter().all(|curr| *curr == NodeStatus::Idle);
 
         if is_truly_idling {
             if let Some((x, y)) = nat {
