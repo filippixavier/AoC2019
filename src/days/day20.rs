@@ -72,8 +72,7 @@ fn find_portal(
         (exit.0 + 1, exit.1)
     };
 
-    if gate_list.contains_key(&door) {
-        let twin_gate = gate_list.get(&door).unwrap();
+    if let Some(twin_gate) = gate_list.get(&door) {
         warps.insert(gate_coordinate, (*twin_gate, is_inner_ring));
         warps.insert(*twin_gate, (gate_coordinate, !is_inner_ring));
     } else {
