@@ -100,9 +100,9 @@ impl Intcode {
 
         // The nth operation consume the element and the previous ones, nth(0) also shift the iterator
         let parameter_flags = (
-            convert_to_flag(instruction.nth(0).unwrap()),
-            convert_to_flag(instruction.nth(0).unwrap()),
-            convert_to_flag(instruction.nth(0).unwrap()),
+            convert_to_flag(instruction.next().unwrap()),
+            convert_to_flag(instruction.next().unwrap()),
+            convert_to_flag(instruction.next().unwrap()),
         );
 
         // Set parameter flags in the right order
@@ -127,6 +127,12 @@ impl Intcode {
                 Error
             }
         }
+    }
+
+    pub fn set_inputs(&mut self, inputs: &[i64]) {
+        self.inputs = inputs.to_owned();
+        self.inputs.reverse();
+        self.status = Running;
     }
 
     pub fn add_input(mut self, input: i64) -> Self {
